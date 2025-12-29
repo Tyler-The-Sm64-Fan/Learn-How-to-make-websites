@@ -1,149 +1,322 @@
 <!DOCTYPE html>
 <html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Learn how to make websites</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+
+<html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>The Green Brick Game</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<style>
-body{background:#111;color:#0f0;font-family:monospace;display:flex;flex-direction:column;align-items:center;margin:0;padding:0;}
-canvas{background:#000;border:4px solid #0f0;margin-top:10px;}
-.topbar{width:360px;display:flex;justify-content:space-between;font-size:16px;}
-.controls{margin-top:15px;display:flex;gap:20px;}
-.dpad{display:grid;grid-template-columns:70px 70px 70px;grid-template-rows:70px 70px 70px;}
-.btn{background:#000;border:2px solid #0f0;color:#0f0;font-size:24px;touch-action:none;}
-.up{grid-column:2;}
-.left{grid-column:1;grid-row:2;}
-.right{grid-column:3;grid-row:2;}
-.down{grid-column:2;grid-row:3;}
-.rotate{width:90px;height:90px;border-radius:50%;font-size:30px;}
-.pause{margin-top:8px;padding:8px 18px;font-size:18px;}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;}
-.modal-content{border:2px solid #0f0;padding:15px;width:280px;background:#000;font-size:16px;}
-.modal button{margin-top:10px;width:100%;}
-.footer{margin-top:10px;font-size:14px;opacity:0.8;}
-</style>
-</head>
-<body>
 
-<h2>🟩 The Green Brick Game</h2>
+  <meta charset="UTF-8">
 
-<div class="topbar">
-    <div id="fps">FPS: 60</div>
-    <div id="highScore">High Score: 0</div>
-    <div id="state">RUN</div>
-</div>
+  <title>Learn HTML & Website Making</title>
 
-<canvas id="game" width="300" height="600"></canvas>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<div style="margin-top:10px; display:flex; gap:10px;">
-    <button class="btn pause" onclick="togglePause()">⏸ PAUSE</button>
-    <button class="btn pause" onclick="resetGame()">🔄 RESET</button>
-    <button class="btn pause" onclick="shareGame()">📤 SHARE</button>
-    <button class="btn pause" onclick="openAbout()">ℹ ABOUT</button>
-</div>
-
-<div class="controls" id="touchControls">
-    <div class="dpad">
-        <button class="btn up" onpointerdown="rotate()">▲</button>
-        <button class="btn left" onpointerdown="move(-1)">◀</button>
-        <button class="btn right" onpointerdown="move(1)">▶</button>
-        <button class="btn down" onpointerdown="softDrop()">▼</button>
-    </div>
-    <button class="btn rotate" onpointerdown="rotate()">⟳</button>
-</div>
-
-<div class="footer">
-    Powered by HTML5 • JavaScript • Canvas
-</div>
-
-<div class="modal" id="about">
-    <div class="modal-content">
-        <strong>The Green Brick Game</strong><br><br>
-        A modern web remake inspired by classic handheld Brick Game consoles.<br><br>
-        <strong>Controls:</strong><br>
-        Use the touch buttons to move, rotate, pause, and reset.<br><br>
-        <strong>License:</strong><br>
-        GNU General Public License (GPL)<br><br>
-        © 2025 Tyler Dela Cerna<br>
-        <button class="btn" onclick="closeAbout()">CLOSE</button>
-    </div>
-</div>
-
-<script>
-// JS code remains mostly the same
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-const fpsEl=document.getElementById("fps");
-const stateEl=document.getElementById("state");
-const highScoreEl=document.getElementById("highScore");
-
-const COLS=10, ROWS=20, SIZE=30; // bigger blocks
-let board, piece, dropTimer, dropInterval, paused;
-let lastTime=0, frames=0, fpsTimer=0;
-
-// Audio
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-const audio = new AudioCtx();
-function resumeAudio(){ if(audio.state==="suspended") audio.resume(); }
-function beep(freq){ resumeAudio(); const o=audio.createOscillator(); const g=audio.createGain(); o.frequency.value=freq; o.connect(g); g.connect(audio.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001,audio.currentTime+0.12);}
-const sMove=()=>beep(400);
-const sRotate=()=>beep(700);
-const sDrop=()=>beep(250);
-const sLine=()=>beep(900);
-
-// Shapes
-const shapes=[
-[[1,1,1,1]],
-[[1,1],[1,1]],
-[[0,1,0],[1,1,1]],
-[[1,0,0],[1,1,1]],
-[[0,0,1],[1,1,1]]
-];
-
-let highScore = parseInt(localStorage.getItem("greenBrickHigh")||0);
-highScoreEl.textContent = "High Score: " + highScore;
-
-function initGame(){board=Array.from({length:ROWS},()=>Array(COLS).fill(0)); piece=newPiece(); dropTimer=0; dropInterval=500; paused=false; stateEl.textContent="RUN";}
-function resetGame(){ initGame(); }
-function newPiece(){ return {shape:shapes[Math.random()*shapes.length|0],x:3,y:0}; }
-
-function drawBlock(x,y){ ctx.fillStyle="#0f0"; ctx.fillRect(x*SIZE,y*SIZE,SIZE-1,SIZE-1);}
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);board.forEach((r,y)=>r.forEach((v,x)=>v&&drawBlock(x,y)));piece.shape.forEach((r,y)=>r.forEach((v,x)=>v&&drawBlock(piece.x+x,piece.y+y)));}
-
-function collide(dx=0,dy=0,shape=piece.shape){return shape.some((r,y)=>r.some((v,x)=>{if(!v) return false; let nx=piece.x+x+dx, ny=piece.y+y+dy; return nx<0||nx>=COLS||ny>=ROWS||(ny>=0&&board[ny][nx]);}));}
-function merge(){piece.shape.forEach((r,y)=>r.forEach((v,x)=>{if(v) board[piece.y+y][piece.x+x]=1;}));}
-function clearLines(){const before=board.length;board=board.filter(r=>r.some(v=>!v));const cleared=before-board.length;while(board.length<ROWS) board.unshift(Array(COLS).fill(0)); if(cleared) sLine(); if(cleared>0){highScore+=cleared; localStorage.setItem("greenBrickHigh",highScore); highScoreEl.textContent="High Score: "+highScore;}}
-
-function move(d){ if(!paused&&!collide(d,0)){piece.x+=d;sMove();} }
-function rotate(){ if(paused) return; const r=piece.shape[0].map((_,i)=>piece.shape.map(row=>row[i]).reverse()); if(!collide(0,0,r)){piece.shape=r;sRotate();} }
-function softDrop(){ if(!paused&&!collide(0,1)){piece.y++;sDrop();} }
-function togglePause(){ paused=!paused; stateEl.textContent=paused?"PAUSE":"RUN"; }
-
-function openAbout(){ paused=true; stateEl.textContent="PAUSE"; document.getElementById("about").style.display="flex"; }
-function closeAbout(){ document.getElementById("about").style.display="none"; }
-function shareGame(){const url=window.location.href;if(navigator.share){navigator.share({title:"The Green Brick Game", text:"Play The Green Brick Game!", url});} else {prompt("Copy this link to share:", url);}}
-
-function update(time){
-    const dt=time-lastTime; lastTime=time;
-    frames++; fpsTimer+=dt;
-    if(fpsTimer>=1000){ fpsEl.textContent="FPS: "+frames; frames=0; fpsTimer=0; }
-
-    if(!paused){
-        dropTimer+=dt;
-        if(dropTimer>dropInterval){
-            if(!collide(0,1)) piece.y++;
-            else{ merge(); clearLines(); piece=newPiece(); }
-            dropTimer=0;
-        }
+  <style>
+    /* ===== FONT FIX ===== */
+    @font-face {
+      font-family: "Segoe Print Web";
+      src: local("Segoe Print"), local("SegoePrint");
     }
 
-    draw();
-    requestAnimationFrame(update);
+    /* ===== GLOBAL ===== */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe Print Web", "Segoe UI", Verdana, Arial, sans-serif;
+      background: linear-gradient(to bottom, #dcdcdc, #bfbfbf);
+      color: #000;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: linear-gradient(#004a99, #002b66);
+      color: #fff;
+      padding: 22px;
+      text-align: center;
+      border-bottom: 4px solid #001a3d;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    header p {
+      margin-top: 5px;
+      font-size: 14px;
+    }
+
+    /* ===== NAV ===== */
+    nav {
+      background: linear-gradient(#eeeeee, #cfcfcf);
+      padding: 10px;
+      border-bottom: 2px solid #999;
+      text-align: center;
+    }
+
+    nav a {
+      margin: 0 18px;
+      text-decoration: none;
+      color: #003366;
+      font-weight: bold;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    /* ===== MAIN PANEL ===== */
+    main {
+      max-width: 900px;
+      margin: 20px auto;
+      background: linear-gradient(#ffffff, #f2f2f2);
+      border: 2px solid #aaa;
+      padding: 20px;
+    }
+
+    /* ===== SECTIONS ===== */
+    section {
+      margin-bottom: 35px;
+      background: linear-gradient(#f9f9f9, #e6e6e6);
+      padding: 15px;
+      border: 1px solid #bbb;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #003366;
+      border-bottom: 2px solid #aaa;
+      padding-bottom: 5px;
+    }
+
+    pre {
+      background: #ffffff;
+      border: 1px solid #aaa;
+      padding: 10px;
+      overflow-x: auto;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: linear-gradient(#d6d6d6, #bdbdbd);
+      border-top: 3px solid #999;
+      text-align: center;
+      padding: 15px;
+      font-size: 13px;
+    }
+
+    .powered {
+      margin-top: 6px;
+      color: #333;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <header>
+
+    <h1>Learn How to Make Websites</h1>
+
+    <p>HTML • CSS • JavaScript • GitHub Pages</p>
+
+  </header>
+
+  <nav>
+
+    <a href="#html">HTML</a>
+
+    <a href="#css">CSS</a>
+
+    <a href="#js">JavaScript</a>
+
+    <a href="#github">GitHub Pages</a>
+
+    <a href="#about">About</a>
+
+  </nav>
+
+  <main>
+
+    <section id="html">
+
+      <h2>HTML (index.html)</h2>
+
+      <p>
+
+        HTML (HyperText Markup Language) is the structure of every website.
+
+        The main file of a website is called <strong>index.html</strong>.
+
+        When someone visits your site, this file loads first.
+
+      </p>
+
+      <p><strong>Basic HTML example:</strong></p>
+
+      <pre>
+
+&lt;!DOCTYPE html&gt;
+
+&lt;html&gt;
+
+&lt;head&gt;
+
+    &lt;title&gt;My Website&lt;/title&gt;
+
+&lt;/head&gt;
+
+&lt;body&gt;
+
+    &lt;h1&gt;Hello World&lt;/h1&gt;
+
+    &lt;p&gt;This is my website&lt;/p&gt;
+
+&lt;/body&gt;
+
+&lt;/html&gt;
+
+    </pre>
+
+    </section>
+
+    <section id="css">
+
+      <h2>CSS (style.css)</h2>
+
+      <p>
+
+        CSS (Cascading Style Sheets) controls how the website looks.
+
+        It is usually stored in a file named <strong>style.css</strong>.
+
+      </p>
+
+      <p><strong>Basic CSS example:</strong></p>
+
+      <pre>
+
+body {
+
+    background-color: lightgray;
+
+    font-family: Arial;
+
 }
 
-initGame();
-requestAnimationFrame(update);
-</script>
+h1 {
+
+    color: blue;
+
+}
+
+    </pre>
+
+      <p>
+
+        CSS is connected to HTML using:
+
+        <code>&lt;link rel="stylesheet" href="style.css"&gt;</code>
+
+      </p>
+
+    </section>
+
+    <section id="js">
+
+      <h2>JavaScript (script.js)</h2>
+
+      <p>
+
+        JavaScript makes websites interactive. It can react to clicks,
+
+        change text, and control behavior.
+
+        JavaScript is usually saved as <strong>script.js</strong>.
+
+      </p>
+
+      <p><strong>Basic JavaScript example:</strong></p>
+
+      <pre>
+
+function sayHello() {
+
+    alert("Hello from JavaScript!");
+
+}
+
+    </pre>
+
+    </section>
+
+    <section id="github">
+
+      <h2>GitHub Pages</h2>
+
+      <p>
+
+        GitHub Pages allows you to host websites for free.
+
+        You upload your <strong>index.html</strong>, <strong>style.css</strong>,
+
+        and <strong>script.js</strong> files to a GitHub repository.
+
+      </p>
+
+      <p>
+
+        Your website will be available at:
+
+        <br>
+
+        <strong>https://username.github.io/repository-name/</strong>
+
+      </p>
+
+    </section>
+
+    <section id="about">
+
+      <h2>About This Website</h2>
+
+      <p>
+
+        This website is designed to teach beginners how websites work
+
+        using HTML, CSS, and JavaScript.
+
+        It uses a classic, simple design inspired by early web pages.
+
+      </p>
+
+    </section>
+
+  </main>
+
+  <footer>
+
+    <div>© 2025 Tyler Dela Cerna. All rights reserved.</div>
+
+    <div class="powered">Powered by HTML, CSS, JavaScript, and GitHub Pages</div>
+
+  </footer>
 
 </body>
+
+</html>
+    
+  </body>
+  
 </html>
